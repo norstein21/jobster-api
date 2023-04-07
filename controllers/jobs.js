@@ -1,5 +1,8 @@
+const UserModel = require("../models/User");
+
 const getAllJobs = async (req, res) => {
-  res.send("get all jobs");
+  const user = await UserModel.find({});
+  res.status(200).json({ msg: "Success", user });
 };
 
 const getJob = async (req, res) => {
