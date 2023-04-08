@@ -1,31 +1,32 @@
 const UserModel = require("../models/User");
-const { StatusCodes } = require("http-status-codes");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const { StatusCodes } = require("http-status-codes");
+const { UnauthenticatedError, BadRequestError } = require("../errors");
 
 const register = async (req, res) => {
   const user = await UserModel.create({ ...req.body });
-  const token = jwt.sign(
-    { userId: user._id, email: user.email },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: process.env.JWT_LIFETIME,
-    }
-  );
-  res
-    .status(StatusCodes.CREATED)
-    .json({ msg: "Success add users", email: user.email, token });
-  // const { name, email, password } = req.body;
-  // //JANGAN LUPA PAKE AWAIT, SALT DAN HASHNYA
-  // //gen salt > parameternya adalah byte yg ingin ditambahkan, makin banyak makin bagus tp bakal menambah beban processing data
-  // const salt = await bcrypt.genSalt(10);
-  // //hash password yg ada plus salt
-  // const hashPassword = await bcrypt.hash(password, salt);
-  // const tempUser = { name, email, password: hashPassword };
+  const token = user.createJWT();
+  res.status(StatusCodes.CREATED).json({ user: { name: user.name }, token });
 };
 
 const login = async (req, res) => {
-  res.send("login user");
+  const { email, password } = req.body;
+  //Kalau salah satu email dan password null
+  if (!email || !password) {
+    throw new BadRequestError("Please provide email and password");
+  }
+  //Temukan salah satu email
+  const user = await UserModel.findOne({ email: email });
+  if (!user) {
+    throw new UnauthenticatedError("Invalid credential");
+  }
+  const check = await bcrypt.compare(password, user.password);
+  if (!check) {
+    throw new UnauthenticatedError("Invalid password");
+  }
+
+  const token = await user.createJWT();
+  res.status(StatusCodes.OK).json({ msg: "Success login", token, user });
 };
 
 module.exports = { register, login };
