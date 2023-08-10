@@ -43,6 +43,9 @@ const updateJob = async (req, res) => {
     req.body,
     { new: true, runValidators: true }
   );
+  if (!updatedJob) {
+    throw new NotFoundError(`Data tidak ditemukan, id=${jobId}`);
+  }
   res.status(StatusCodes.ACCEPTED).json({ updatedJob });
 };
 
